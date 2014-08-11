@@ -16,9 +16,9 @@
 
 * CPU主频：freq
 
-* 可用内存：mem
+* 物理内存：mem
 
-* 可用磁盘空间：disk
+* 物理磁盘空间：disk
 
 * JDK类型和版本：jdk
 
