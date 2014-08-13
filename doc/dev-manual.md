@@ -1,3 +1,7 @@
+# 开发方法
+
+本软件的开发语言是Java，使用Eclipse作为开发工具，使用Gradle做项目管理工具。
+
 # 指标获取算法
 
 * ostype: System.getProperty("os.name")

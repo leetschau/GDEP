@@ -9,6 +9,5 @@ public class ProbeTest {
 	public void testrun() throws ConfigurationException {
 		Probe probe = new Probe();
 		probe.testSystem();
-		// fail("aaa");
 	}
 }

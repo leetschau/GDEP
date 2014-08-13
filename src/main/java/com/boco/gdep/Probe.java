@@ -6,44 +6,38 @@ import java.util.Set;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Probe {
+	private static final Logger logger = LoggerFactory.getLogger(Probe.class);
 
-	public static final String CONF_FILE_PATH = "src/test/resources/dep.conf";
+	public static final String CONF_FILE_PATH = "dep.conf";
+	public static final String OS_TYPE = "ostype";
+	public static final String CPU_FREQ = "freq";
+	public static final String MEMORY = "memory";
+	public static final String DISK = "disk";
+	public static final String JDK = "jdk";
+	public static final String FD = "fd";
 
 	public void testSystem() throws ConfigurationException {
-		HierarchicalINIConfiguration iniConfObj = new HierarchicalINIConfiguration(
+		final HierarchicalINIConfiguration probeConfs = new HierarchicalINIConfiguration(
 				CONF_FILE_PATH);
-		Set setOfSections = iniConfObj.getSections();
-		System.out.println("sets of sections:" + setOfSections);
-		Iterator sectionNames = setOfSections.iterator();
+		Set<String> sections = probeConfs.getSections();
 
-		while (sectionNames.hasNext()) {
-			String sectionName = sectionNames.next().toString();
-			System.out.println("Section name: " + sectionName);
-			HierarchicalINIConfiguration iniObj = null;
-			SubnodeConfiguration sObj = iniConfObj.getSection(sectionName);
-			Iterator it1 = sObj.getKeys();
+		for (String sectionName : sections) {
+			logger.debug("Get section: " + sectionName);
+			SubnodeConfiguration items = probeConfs.getSection(sectionName);
+			Iterator<String> keys = items.getKeys();
+			while (keys.hasNext()) {
+				String key = keys.next();
+				String value = items.getString(key);
+				logger.debug("key: " + key + ", value: " + value);
+				if (key == OS_TYPE) {
 
-			while (it1.hasNext()) {
-				// Get element
-				Object key = it1.next();
-				System.out.print("Key " + key.toString() + " Value "
-						+ sObj.getString(key.toString()) + "\n");
+				}
 			}
 		}
-		// Properties p = new Properties();
-		// p.load(new FileReader(CONF_FILE_PATH));
-		// Enumeration<?> enumeration = p.propertyNames();
-		// while (enumeration.hasMoreElements()) {
-		// String key = (String) enumeration.nextElement();
-		// String value = p.getProperty(key);
-		// System.out.println(key + "=" + value);
-		// }
-		// System.out.println(p.propertyNames());
-		// String ostype = System.getProperty("os.name") + "-"
-		// + System.getProperty("os.arch");
-
 	}
 
 	public static void main(String[] args) throws ConfigurationException {
