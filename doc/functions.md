@@ -14,9 +14,9 @@
 
 * 操作系统类型：ostype
 
-* CPU主频：freq
+* CPU信息：cpu
 
-* 物理内存：mem
+* 物理内存：memory
 
 * 物理磁盘空间：disk
 
