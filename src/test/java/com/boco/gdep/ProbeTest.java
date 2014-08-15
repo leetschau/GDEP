@@ -11,6 +11,11 @@ import org.apache.commons.io.FileUtils;
 import org.json.simple.JSONValue;
 import org.junit.Test;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+
 public class ProbeTest {
 
 	@Test
@@ -28,5 +33,18 @@ public class ProbeTest {
 		for (String key : basic.keySet()) {
 			System.out.println("key " + key + ": " + basic.get(key));
 		}
+	}
+
+	@Test
+	public void testJsonPrettyPrint() throws IOException {
+		String jsonReport = FileUtils.readFileToString(new File(REPORT_FILE));
+		System.out.println("Origin:");
+		System.out.println(jsonReport);
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		JsonParser jp = new JsonParser();
+		JsonElement je = jp.parse(jsonReport);
+		String prettyJsonString = gson.toJson(je);
+		System.out.println("New:");
+		System.out.println(prettyJsonString);
 	}
 }

@@ -17,6 +17,11 @@ import org.json.simple.JSONValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+
 public class Probe {
 	private static final Logger logger = LoggerFactory.getLogger(Probe.class);
 	public static final String REPORT_FILE = "DepResult.txt";
@@ -71,8 +76,13 @@ public class Probe {
 				result.put(key, getCheckResult(key));
 			}
 		}
-		String jsonText = JSONValue.toJSONString(report);
-		FileUtils.writeStringToFile(new File(REPORT_FILE), jsonText);
+		String rawJsonText = JSONValue.toJSONString(report);
+
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		JsonParser jp = new JsonParser();
+		JsonElement je = jp.parse(rawJsonText);
+		String jsonReport = gson.toJson(je);
+		FileUtils.writeStringToFile(new File(REPORT_FILE), jsonReport);
 		logger.info("Report has been written to result file successfully.");
 	}
 

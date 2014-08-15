@@ -4,7 +4,7 @@
 
 # 使用方法
 
-请参考doc/functions.md文档。
+请参考用户使用手册doc/user-manual.md和功能说明文档doc/functions.md。
 
 # 开发方法
 
