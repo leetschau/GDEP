@@ -98,7 +98,7 @@ public class Probe {
 			String allMem = runLinuxShell("free -m", "Mem:.*");
 			return allMem.split(" +")[1] + "MB";
 		} else if (key.equals(DISK)) {
-			String allDisk = runLinuxShell("df -m .", "/.*");
+			String allDisk = runLinuxShell("df -Pm .", "/.*");
 			return allDisk.split(" +")[1] + "MB";
 		} else if (key.equals(JDK)) {
 			return System.getProperty("java.vendor") + " "
