@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
@@ -30,12 +31,22 @@ public class Probe {
 
 	public static final String CONF_FILE_PATH = "dep.conf";
 
+	public static final String SEC_BASIC = "basic";
+	public static final String SEC_PERF = "performance";
+	public static final String SEC_CLIENT = "client";
+
 	public static final String OSTYPE = "ostype";
 	public static final String CPU = "cpu";
 	public static final String MEMORY = "memory";
 	public static final String DISK = "disk";
 	public static final String JDK = "jdk";
 	public static final String FD = "fd";
+	public static final String NET_IO = "net_io";
+	public static final String PKG_LOSS = "pkg_loss";
+	public static final String CLIENT_USER = "user";
+	public static final String CLIENT_IP = "ip";
+
+	private HierarchicalINIConfiguration probeConfs;
 
 	public Probe() {
 		Map<String, String> basic = new LinkedHashMap<String, String>();
@@ -45,16 +56,23 @@ public class Probe {
 		basic.put(DISK, "");
 		basic.put(JDK, "");
 		basic.put(FD, "");
-		report.put("basic", basic);
+		report.put(SEC_BASIC, basic);
+
+		Map<String, String> perf = new LinkedHashMap<String, String>();
+		perf.put(NET_IO, "");
+		perf.put(PKG_LOSS, "");
+		report.put(SEC_PERF, perf);
 	}
 
 	public void testSystem() throws ConfigurationException, IOException {
-		final HierarchicalINIConfiguration probeConfs = new HierarchicalINIConfiguration(
-				CONF_FILE_PATH);
+		probeConfs = new HierarchicalINIConfiguration(CONF_FILE_PATH);
 		Set<String> sections = probeConfs.getSections();
 
 		for (String sectionName : sections) {
 			logger.debug("Get section: " + sectionName);
+			if (sectionName.equals(SEC_CLIENT)) {
+				continue;
+			}
 			if (!report.containsKey(sectionName)) {
 				logger.error("Section name " + sectionName
 						+ " is invalid. Correct it and run again.");
@@ -106,34 +124,61 @@ public class Probe {
 		} else if (key.equals(FD)) {
 			String fileDesc = runLinuxShell("cat /proc/sys/fs/file-max", null);
 			return fileDesc;
+		} else if (key.equals(NET_IO)) {
+			runLinuxShell("dd if=/dev/zero of=test bs=1M count=100", "copied");
+			String copyfile = "scp test " + getClientInfo(true) + ":~/";
+			long start = System.nanoTime();
+			runLinuxShell(copyfile, "100%");
+			long estimatedTime = TimeUnit.NANOSECONDS.toSeconds(System
+					.nanoTime() - start);
+			long io_speed = 100 / estimatedTime;
+			runLinuxShell("rm -rf test", null);
+			return io_speed + "MB/s";
+		} else if (key.equals(PKG_LOSS)) {
+			String pkgloss = runLinuxShell(
+					"ping -c 10 " + getClientInfo(false), ".*packet.*");
+			return pkgloss.split(",")[2].split(" ")[1];
 		} else {
 			return "";
 		}
 	}
 
-	private String runLinuxShell(String cmd, String pattern) {
+	String getClientInfo(boolean withUser) {
+		String user = probeConfs.getSection(SEC_CLIENT).getString(CLIENT_USER);
+		String ip = probeConfs.getSection(SEC_CLIENT).getString(CLIENT_IP);
+		if (withUser) {
+			return user + "@" + ip;
+		} else {
+			return ip;
+		}
+	}
+
+	String runLinuxShell(String cmd, String pattern) {
 		Process process;
+		String result = null;
 		try {
 			process = Runtime.getRuntime().exec(cmd);
 			InputStreamReader ir = new InputStreamReader(
 					process.getInputStream());
 			LineNumberReader input = new LineNumberReader(ir);
 			if (pattern == null) {
-				return input.readLine();
+				result = input.readLine();
+				logger.debug("Linux stdout: " + result);
+				return result;
 			}
 			String line;
 			while ((line = input.readLine()) != null) {
+				logger.debug("Linux stdout: " + line);
 				if (line.matches(pattern)) {
-					return line;
+					result = line;
 				} else {
 					continue;
 				}
 			}
-
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return null;
+		return result;
 	}
 
 	public static void main(String[] args) throws ConfigurationException,

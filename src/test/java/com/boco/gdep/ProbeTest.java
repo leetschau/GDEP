@@ -5,6 +5,7 @@ import static com.boco.gdep.Probe.REPORT_FILE;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.io.FileUtils;
@@ -46,5 +47,24 @@ public class ProbeTest {
 		String prettyJsonString = gson.toJson(je);
 		System.out.println("New:");
 		System.out.println(prettyJsonString);
+	}
+
+	@Test
+	public void testElapsedTime() {
+		Probe probe = new Probe();
+		long start = System.nanoTime();
+		probe.runLinuxShell("time vmstat 3 2", ".*total.*");
+		long estimatedTime = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime()
+				- start);
+		long io_speed = 11 / estimatedTime;
+		System.out.println("speed is: " + io_speed);
+	}
+
+	@Test
+	public void extractPkgLoss() {
+		String raw = "10 packets transmitted, 10 received, 0% packet loss, time 8996ms";
+		String pkgLoss = raw.split(",")[2];
+		String plp = pkgLoss.split(" ")[1];
+		System.out.println(plp);
 	}
 }

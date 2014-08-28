@@ -6,7 +6,7 @@ mainClassName = "com.boco.gdep.Probe"
 
 sourceCompatibility = 1.5
 
-version = '0.1'
+version = '0.2'
 
 jar {
     manifest {
