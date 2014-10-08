@@ -1,6 +1,14 @@
 # 使用方法
 
-GDEP运行需要JDK 6或以上版本。
+GDEP有两种使用场景：基准测试和比较测试，
+
+当前目录下有dep.conf文件和DepStandard.txt两个文件时，运行比较测试，
+测试范围由模板DepStandard.txt定义，网络测试的对端定义在dep.conf文件的[client]节中；
+
+当前目录下只有dep.conf文件时，运行基准测试，测试范围和网络测试对端都由dep.conf文件定义。
+如果希望将测试结果作为后续测试的基准，需要将结果文件DepResult.txt改名为DepStandard.txt。
+
+GDEP运行需要JDK 6或以上版本，安装和使用过程包含下面的步骤：
 
 1. 安装GDEP：将gdep-*.zip文件解压到任意位置；
 

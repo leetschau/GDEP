@@ -1,6 +1,7 @@
 package com.boco.gdep;
 
 import static com.boco.gdep.Probe.REPORT_FILE;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,5 +67,21 @@ public class ProbeTest {
 		String pkgLoss = raw.split(",")[2];
 		String plp = pkgLoss.split(" ")[1];
 		System.out.println(plp);
+	}
+
+	@Test
+	public void extractNumbers() {
+		String stdVal = "328";
+		String numPart = stdVal.replaceAll("\\D+", "");
+		assertEquals(numPart, stdVal);
+		String numPart2 = (stdVal + "MB/s").replaceAll("\\D+", "");
+		assertEquals(numPart2, stdVal);
+	}
+
+	@Test
+	public void extractCPU() {
+		String cpuModel = "model name	: Intel(R) Core(TM) i5-3210M CPU @ 2.50GHz";
+		String model = "Intel(R) Core(TM) i5-3210M CPU @ 2.50GHz";
+		assertEquals(model, cpuModel.split(": ")[1]);
 	}
 }

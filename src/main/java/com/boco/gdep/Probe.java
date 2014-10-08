@@ -33,6 +33,7 @@ public class Probe {
 
 	private Map<String, Map<String, String>> report = new LinkedHashMap<String, Map<String, String>>();
 
+	public static final String STANDARD_FILE_PATH = "DepStandard.txt";
 	public static final String CONF_FILE_PATH = "dep.conf";
 
 	public static final String BASIC = "basic";
@@ -44,7 +45,7 @@ public class Probe {
 	public static final String MEMORY = "memory";
 	public static final String DISK = "disk";
 	public static final String JDK = "jdk";
-	public static final String FD = "file-descriptor";
+	public static final String FD = "file_descriptor";
 	public static final String NET_IO = "net_io";
 	public static final String PKG_LOSS = "pkg_loss";
 	public static final String CLIENT_USER = "user";
@@ -76,7 +77,34 @@ public class Probe {
 	}
 
 	public void testSystem() throws ConfigurationException, IOException {
+		File template = new File(CONF_FILE_PATH);
+		File stdReport = new File(STANDARD_FILE_PATH);
+		if (!template.exists()) {
+			logger.error("Neither config or standard file exists!");
+			System.exit(-1);
+		}
 		probeConfs = new HierarchicalINIConfiguration(CONF_FILE_PATH);
+		if (stdReport.exists()) {
+			logger.info("Running a relative test based on "
+					+ stdReport.getAbsolutePath());
+			relativeTest(stdReport);
+		} else {
+			logger.info("Running a standard test.");
+			standardTest();
+		}
+
+		String rawJsonText = JSONValue.toJSONString(report);
+
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		JsonParser jp = new JsonParser();
+		JsonElement je = jp.parse(rawJsonText);
+
+		String jsonReport = gson.toJson(je);
+		FileUtils.writeStringToFile(new File(REPORT_FILE), jsonReport);
+		logger.info("Report has been written to result file successfully.");
+	}
+
+	private void standardTest() throws ConfigurationException, IOException {
 		Set<String> sections = probeConfs.getSections();
 
 		for (String sectionName : sections) {
@@ -93,8 +121,7 @@ public class Probe {
 			Iterator<String> keys = items.getKeys();
 			while (keys.hasNext()) {
 				String key = keys.next();
-				String value = items.getString(key);
-				logger.debug("key: " + key + ", value: " + value);
+				logger.debug("Test item: " + key);
 				Map<String, String> result = (Map<String, String>) report
 						.get(sectionName);
 				if (!result.containsKey(key)) {
@@ -102,45 +129,74 @@ public class Probe {
 							+ " is invalid. Correct it and run again.");
 					System.exit(-1);
 				}
-				result.put(key, getCheckResult(key));
+				result.put(key, getCheckResult(key, null));
 			}
 
 			Map<String, String> ipsection = new LinkedHashMap<String, String>();
 			ipsection.put("ip", getClientInfo(false));
-			report.put("Test Peer", ipsection);
+			report.put(CLIENT, ipsection);
 		}
-		String rawJsonText = JSONValue.toJSONString(report);
-
-		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		JsonParser jp = new JsonParser();
-		JsonElement je = jp.parse(rawJsonText);
-
-		String jsonReport = gson.toJson(je);
-		FileUtils.writeStringToFile(new File(REPORT_FILE), jsonReport);
-		logger.info("Report has been written to result file successfully.Performance index");
 	}
 
-	private String getCheckResult(String key) throws IOException {
+	private void relativeTest(File stdReport) throws IOException {
+		String jsonReport = FileUtils.readFileToString(stdReport);
+		Map<String, Map<String, String>> standard_report = (Map<String, Map<String, String>>) JSONValue
+				.parse(jsonReport);
+		for (String sectionName : standard_report.keySet()) {
+			logger.debug("Get section: " + sectionName);
+			if (sectionName.equals(CLIENT)) {
+				continue;
+			}
+			if (!report.containsKey(sectionName)) {
+				logger.error("Section name " + sectionName
+						+ " is invalid. Correct it and run again.");
+				System.exit(-1);
+			}
+			Map<String, String> testsuite = standard_report.get(sectionName);
+			for (String key : testsuite.keySet()) {
+				String stdVal = testsuite.get(key);
+				logger.debug("Test item: " + key + ", standard: " + stdVal);
+				Map<String, String> result = (Map<String, String>) report
+						.get(sectionName);
+				if (!result.containsKey(key)) {
+					logger.error("Check item " + key
+							+ " is invalid. Correct it and run again.");
+					System.exit(-1);
+				}
+				result.put(key, getCheckResult(key, stdVal));
+			}
 
+			Map<String, String> ipsection = new LinkedHashMap<String, String>();
+			ipsection.put("ip", getClientInfo(false));
+			report.put(CLIENT, ipsection);
+		}
+	}
+
+	private String getCheckResult(String key, String stdVal) throws IOException {
 		if (key.equals(OSTYPE)) {
-			return System.getProperty("os.name") + " v"
+			String os = System.getProperty("os.name") + " v"
 					+ System.getProperty("os.version") + " "
 					+ System.getProperty("os.arch");
+			return buildTextResult(os, stdVal);
 		} else if (key.equals(CPU)) {
-			String cpuModel = runLinuxShell("lscpu", "CPU\\(s\\).*");
-			return cpuModel.split(": +")[1];
+			String coreNum = runLinuxShell("lscpu", "CPU\\(s\\).*")
+					.split(": +")[1];
+			String cpuInfo = runLinuxShell("cat /proc/cpuinfo", "model name.*")
+					.split(": ")[1] + " * " + coreNum;
+			return buildTextResult(cpuInfo, stdVal);
 		} else if (key.equals(MEMORY)) {
-			String allMem = runLinuxShell("free -m", "Mem:.*");
-			return allMem.split(" +")[1] + "MB";
+			String allMem = runLinuxShell("free -m", "Mem:.*").split(" +")[1];
+			return buildNumberResult(allMem, "MB", stdVal);
 		} else if (key.equals(DISK)) {
-			String allDisk = runLinuxShell("df -Pm .", "/.*");
-			return allDisk.split(" +")[1] + "MB";
+			String allDisk = runLinuxShell("df -Pm .", "/.*").split(" +")[1];
+			return buildNumberResult(allDisk, "MB", stdVal);
 		} else if (key.equals(JDK)) {
-			return System.getProperty("java.vendor") + " "
+			String jdkInfo = System.getProperty("java.vendor") + " "
 					+ System.getProperty("java.version");
+			return buildTextResult(jdkInfo, stdVal);
 		} else if (key.equals(FD)) {
 			String fileDesc = runLinuxShell("cat /proc/sys/fs/file-max", null);
-			return fileDesc;
+			return buildNumberResult(fileDesc, "", stdVal);
 		} else if (key.equals(NET_IO)) {
 			runLinuxShell("dd if=/dev/zero of=test bs=1M count=100", "copied");
 			String copyfile = "scp test " + getClientInfo(true) + ":~/";
@@ -150,18 +206,49 @@ public class Probe {
 					.nanoTime() - start);
 			long io_speed = 100 / estimatedTime;
 			runLinuxShell("rm -rf test", null);
-			return io_speed + "MB/s";
+			return buildNumberResult(Long.toString(io_speed), "MB/s", stdVal);
 		} else if (key.equals(PKG_LOSS)) {
 			String pkgloss = runLinuxShell(
 					"ping -c 10 " + getClientInfo(false), ".*packet.*");
-			return pkgloss.split(",")[2].split(" ")[1];
+			return buildTextResult(pkgloss.split(",")[2].split(" ")[1], stdVal);
 		} else if (key.equals(CPU_CALC)) {
-			return testCPUPerformance();
+			return buildNumberResult(testCPUPerformance(), "", stdVal);
 		} else if (key.equals(DISK_IO)) {
 			String diskio = testDiskIOSpeed();
-			return diskio;
+			return buildNumberResult(diskio, "MB/s", stdVal);
 		} else {
 			return "";
+		}
+	}
+
+	private String buildNumberResult(String item, String unit, String stdVal) {
+		String res = item + unit;
+		if (stdVal == null) {
+			return res;
+		}
+		if (res.equals(stdVal)) {
+			return "match: " + res;
+		} else {
+			float thishost = Float.parseFloat(item);
+			float standard = Float.parseFloat(stdVal.replaceAll("\\D+", ""));
+			String compResult = "This host: " + thishost + unit
+					+ "; Template: " + stdVal;
+			if (standard == 0) {
+				return compResult;
+			}
+			float ratio = thishost / standard * 100;
+			return ratio + "%. " + compResult;
+		}
+	}
+
+	private String buildTextResult(String info, String stdVal) {
+		if (stdVal == null) {
+			return info;
+		}
+		if (info.equals(stdVal)) {
+			return "match: " + info;
+		} else {
+			return "mismatch. This host: " + info + "; Template: " + stdVal;
 		}
 	}
 
@@ -234,7 +321,7 @@ public class Probe {
 		}
 
 		runLinuxShell("rm -rf test test1", null);
-		return (io_speed + "MB/s");
+		return Long.toString(io_speed);
 	}
 
 	public String testCPUPerformance() {
@@ -243,7 +330,7 @@ public class Probe {
 		for (int i = 0; i < PI_ROUNDS; i++) {
 			res = Math.pow(Math.PI, 100);
 		}
-		logger.debug("Pi value is " + res);
+		logger.debug("Result is " + res);
 		long estimatedTime = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime()
 				- start);
 		return String.valueOf(estimatedTime);
