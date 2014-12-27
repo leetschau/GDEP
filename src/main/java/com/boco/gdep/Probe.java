@@ -48,6 +48,8 @@ public class Probe {
 	public static final String FD = "file_descriptor";
 	public static final String NET_IO = "net_io";
 	public static final String PKG_LOSS = "pkg_loss";
+	public static final String USED_DISK_PERCENT = "used_disk_percent";
+	public static final String FREE_MEM = "free_memory";
 	public static final String CLIENT_USER = "user";
 	public static final String CLIENT_IP = "ip";
 
@@ -72,6 +74,8 @@ public class Probe {
 		perf.put(CPU_CALC, "");
 		perf.put(DISK_IO, "");
 		perf.put(PKG_LOSS, "");
+		perf.put(USED_DISK_PERCENT, "");
+		perf.put(FREE_MEM, "");
 		perf.put(NET_IO, "");
 		report.put(PERF, perf);
 	}
@@ -211,6 +215,14 @@ public class Probe {
 			String pkgloss = runLinuxShell(
 					"ping -c 10 " + getClientInfo(false), ".*packet.*");
 			return buildTextResult(pkgloss.split(",")[2].split(" ")[1], stdVal);
+		} else if (key.equals(USED_DISK_PERCENT)) {
+
+			String usedDisk = runLinuxShell("df -Pm .", "/.*").split(" +")[4];
+			return buildTextResult(usedDisk, stdVal);
+		} else if (key.equals(FREE_MEM)) {
+			String freeRes = runLinuxShell("free -m", ".*buffers.*");
+			String freeMem = freeRes.split(" +")[3];
+			return buildNumberResult(freeMem, "MB", stdVal);
 		} else if (key.equals(CPU_CALC)) {
 			return buildNumberResult(testCPUPerformance(), "", stdVal);
 		} else if (key.equals(DISK_IO)) {
@@ -340,5 +352,8 @@ public class Probe {
 			IOException {
 		Probe probe = new Probe();
 		probe.testSystem();
+		PluginRunner runner = new PluginRunner();
+		runner.runUserScript();
 	}
+
 }

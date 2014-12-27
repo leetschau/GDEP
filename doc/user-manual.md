@@ -35,13 +35,20 @@ user: user1
 ip: 10.2.0.61
 ```
 
-# 配置文件
+## 用户扩展模块
 
-配置文件分为3节：
+通过编辑plugins/user.script文件，可以将自定义的shell命令和Java文件挂载到环境检测工具上，具体方法是：
 
-# 命令行格式
+在[shell]小节下添加要运行的shell命令，每个命令一行；
+在[java]小节下添加要运行的Java入口类名，同时需要将运行Java程序的jar包及其依赖包保存在plugins/lib文件夹下。
 
 # 报告格式
+
+DepResult.txt文件内容为静态指标(basic)和性能指标(performance)的测试结果，
+
+user_shell.log文件内容为自定义shell命令运行结果。
+
+user_java.log文件内容是自定义Java程序运行结果。
 
 # 目录结构
 
@@ -49,4 +56,6 @@ ip: 10.2.0.61
 
 * lib: 保存GDEP运行需要的第三方类库；
 
-* plugins: 放置扩展插件；
+* plugins: 自定义脚本目录；
+
+* plugins/lib: 自定义Java程序及其依赖包目录。
