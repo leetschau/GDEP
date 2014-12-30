@@ -97,7 +97,24 @@ public class Probe {
 			standardTest();
 		}
 
-		String rawJsonText = JSONValue.toJSONString(report);
+		Map<String, Map<String, String>> finalReport = new LinkedHashMap<String, Map<String, String>>();
+		for (String key : report.keySet()) {
+			if (key.equals("client")) {
+				continue;
+			}
+			Map<String, String> currentMap = report.get(key);
+			Map<String, String> resultSection = new LinkedHashMap<String, String>();
+			for (String item : currentMap.keySet()) {
+				if (currentMap.get(item).equals("")) {
+					continue;
+				}
+				resultSection.put(item, currentMap.get(item));
+			}
+			if (resultSection.size() > 0) {
+				finalReport.put(key, resultSection);
+			}
+		}
+		String rawJsonText = JSONValue.toJSONString(finalReport);
 
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		JsonParser jp = new JsonParser();
